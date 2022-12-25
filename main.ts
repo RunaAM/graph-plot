@@ -1,3 +1,7 @@
+let STEP = 0.01
+let HIGH = 1
+let LOW = 0
+let REPAUS = 5
 //  initialise the lcd screen
 function init_screen() {
     led.enable(false)
@@ -23,7 +27,7 @@ function render_text(val: string, time: number) {
     I2C_LCD1602.clear()
 }
 
-let outputs = [DigitalPin.P0, DigitalPin.P1, DigitalPin.P2, DigitalPin.P12, DigitalPin.P4, DigitalPin.P10, DigitalPin.P6, DigitalPin.P7, DigitalPin.P8]
+let outputs = [DigitalPin.P0, DigitalPin.P1, DigitalPin.P2, DigitalPin.P4, DigitalPin.P6, DigitalPin.P7, DigitalPin.P8, DigitalPin.P9, DigitalPin.P10]
 init_screen()
 render_text("ecran initializat", 1000)
 function oscilatie_simpla(amplitudine: number, frecventa: number, durata: number) {
@@ -35,11 +39,30 @@ function oscilatie_simpla(amplitudine: number, frecventa: number, durata: number
         console.log(pin_id)
         pin_id = Math.floor(pin_id)
         pin_id = calculate_pin_id(pin_id)
-        draw_pin(pin_id, 1)
-        pause(5)
-        draw_pin(pin_id, 0)
-        timp += 0.01
+        draw_pin(pin_id, HIGH)
+        pause(REPAUS)
+        draw_pin(pin_id, LOW)
+        timp += STEP
     }
 }
 
+function fenomen_batai(amplitudine: number, frecventa1: number, frecventa2: number, durata: number) {
+    let pin_id: number;
+    let timp = 0.01
+    let dfrec = (frecventa1 - frecventa2) / (2 * Math.PI)
+    let frec = (frecventa2 + frecventa1) / 2
+    while (timp <= durata) {
+        pin_id = 2 * amplitudine * Math.cos(dfrec * timp) * Math.sin(frec * timp)
+        datalogger.log(datalogger.createCV("timp", timp), datalogger.createCV("y", pin_id))
+        console.log(pin_id)
+        pin_id = Math.floor(pin_id)
+        pin_id = calculate_pin_id(pin_id)
+        draw_pin(pin_id, HIGH)
+        pause(REPAUS)
+        draw_pin(pin_id, LOW)
+        timp += STEP
+    }
+}
+
+fenomen_batai(4, Math.PI / 2, Math.PI / 3, 50)
 render_text("program terminat", 10000)

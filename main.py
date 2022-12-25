@@ -1,3 +1,10 @@
+
+
+STEP = 0.01
+HIGH = 1
+LOW = 0
+REPAUS = 5
+
 # initialise the lcd screen
 def init_screen():
     led.enable(False)
@@ -23,12 +30,13 @@ def render_text(val: string, time: number):
 outputs = [DigitalPin.P0,
     DigitalPin.P1,
     DigitalPin.P2,
-    DigitalPin.P12,
     DigitalPin.P4,
-    DigitalPin.P10,
     DigitalPin.P6,
     DigitalPin.P7,
-    DigitalPin.P8]
+    DigitalPin.P8,
+    DigitalPin.P9,
+    DigitalPin.P10]
+
 
 init_screen()
 
@@ -43,9 +51,27 @@ def oscilatie_simpla(amplitudine: number,frecventa:number,durata:number):
         print(pin_id)
         pin_id = Math.floor(pin_id);
         pin_id = calculate_pin_id(pin_id);
-        draw_pin(pin_id, 1);
-        pause(5);
-        draw_pin(pin_id, 0);
-        timp+=0.01
+        draw_pin(pin_id, HIGH);
+        pause(REPAUS);
+        draw_pin(pin_id, LOW);
+        timp+=STEP
 
+def fenomen_batai(amplitudine: number,frecventa1: number,frecventa2: number, durata: number):
+    timp = 0.01;
+    dfrec = (frecventa1 -frecventa2) / (2 * Math.PI);
+    frec = (frecventa2 + frecventa1) /2;
+    while(timp<=durata):
+        pin_id = 2 * amplitudine * Math.cos(dfrec * timp) * Math.sin(frec * timp);
+        datalogger.log(datalogger.create_cv("timp", timp),
+                             datalogger.create_cv("y", pin_id));
+        print(pin_id)
+        pin_id = Math.floor(pin_id);
+        pin_id = calculate_pin_id(pin_id);
+        draw_pin(pin_id, HIGH);
+        pause(REPAUS);
+        draw_pin(pin_id, LOW);
+        timp+=STEP
+
+
+fenomen_batai(4,Math.PI/2, Math.PI/3,50);
 render_text("program terminat",10000);
