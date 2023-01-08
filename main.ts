@@ -6,14 +6,17 @@ let MAX_VALUE = 1023
 let TOP_ROW = 0
 let BOTTOM_ROW = 1
 let HALF_OF_MAX_VALUE = MAX_VALUE / 2
+let THIRD_OF_MAX_VALUE = MAX_VALUE / 3
 let CONST_FOR_GETTING_FIVE_NUMBERS = 200
 let NO_TIME = -1
 let FREQUENCES = [Math.PI / 6, Math.PI / 4, Math.PI / 3, Math.PI / 2, Math.PI, 2 * Math.PI]
 let LCD_ADDRESS = 39
+let NUMBER_PINS = 9
+let PHASES = [Math.PI / 6, Math.PI / 3, 2 * Math.PI / 3, Math.PI / 2, Math.PI, 3 * Math.PI / 2]
 //  array of where are the leds connected
 let OUTPUTS = [DigitalPin.P2, DigitalPin.P3, DigitalPin.P4, DigitalPin.P6, DigitalPin.P7, DigitalPin.P8, DigitalPin.P9, DigitalPin.P10, DigitalPin.P12]
 //  initialise the lcd screen and repurpose the GPIO pins for external use
-function init_screen() {
+function init_device() {
     led.enable(false)
     pins.setPull(DigitalPin.P1, PinPullMode.PullUp)
     I2C_LCD1602.LcdInit(LCD_ADDRESS)
@@ -38,60 +41,48 @@ function draw_pin(pin: number, value: number) {
 
 //  a simple function for getting the correct pin number
 function calculate_pin_id(val: number): number {
-    return 9 - (val + 5)
+    return NUMBER_PINS - (val + (NUMBER_PINS + 1) / 2)
 }
 
-function set_frequence(text: string): number {
+function set_value(text: string): number {
     let choice: number;
     pause(1000)
-    let is_frequence = false
-    let frequence = 0
+    let is_value = false
+    let value = 0
     I2C_LCD1602.clear()
-    while (!is_frequence) {
+    while (!is_value) {
         choice = pins.analogReadPin(AnalogPin.P0)
-        frequence = FREQUENCES[Math.trunc(choice / CONST_FOR_GETTING_FIVE_NUMBERS)]
-        render_text(text + frequence, TOP_ROW, NO_TIME)
+        value = Math.trunc(choice / CONST_FOR_GETTING_FIVE_NUMBERS)
+        render_text(text + value, TOP_ROW, NO_TIME)
         if (pins.digitalReadPin(DigitalPin.P1) == LOW) {
-            is_frequence = true
+            is_value = true
         }
         
     }
-    return frequence
+    return value
 }
 
-function set_amplitude(): number {
+function set_from_range(text: string, range: string): number {
     let choice: number;
     pause(1000)
-    let is_amplitude = false
-    let amplitude = 0
+    let is_value = false
+    let value = 0
     I2C_LCD1602.clear()
-    while (!is_amplitude) {
+    while (!is_value) {
         choice = pins.analogReadPin(AnalogPin.P0)
-        amplitude = Math.trunc(choice / CONST_FOR_GETTING_FIVE_NUMBERS)
-        render_text("amp = " + amplitude, TOP_ROW, NO_TIME)
+        if (range == "FREQUENCE") {
+            value = FREQUENCES[Math.trunc(choice / CONST_FOR_GETTING_FIVE_NUMBERS)]
+        } else {
+            value = PHASES[Math.trunc(choice / CONST_FOR_GETTING_FIVE_NUMBERS)]
+        }
+        
+        render_text(text + value, TOP_ROW, NO_TIME)
         if (pins.digitalReadPin(DigitalPin.P1) == LOW) {
-            is_amplitude = true
+            is_value = true
         }
         
     }
-    return amplitude
-}
-
-function set_duration(): number {
-    let choice: number;
-    let is_duration = false
-    let duration = 0
-    I2C_LCD1602.clear()
-    while (!is_duration) {
-        choice = pins.analogReadPin(AnalogPin.P0)
-        duration = Math.trunc(choice / CONST_FOR_GETTING_FIVE_NUMBERS) * 10
-        render_text("duration = " + duration, TOP_ROW, NO_TIME)
-        if (pins.digitalReadPin(DigitalPin.P1) == LOW) {
-            is_duration = true
-        }
-        
-    }
-    return duration
+    return value
 }
 
 //  main menu
@@ -100,10 +91,12 @@ function choose_program() {
     let choice = 0
     while (is_menu) {
         choice = pins.analogReadPin(AnalogPin.P0)
-        if (choice < HALF_OF_MAX_VALUE) {
+        if (choice <= THIRD_OF_MAX_VALUE) {
             render_text("oscilatie simpla", TOP_ROW, NO_TIME)
-        } else if (choice >= HALF_OF_MAX_VALUE) {
+        } else if (choice <= 2 * THIRD_OF_MAX_VALUE) {
             render_text("fenomen de batai", TOP_ROW, NO_TIME)
+        } else if (choice <= MAX_VALUE) {
+            render_text("curbe  lissajous", TOP_ROW, NO_TIME)
         }
         
         if (pins.digitalReadPin(DigitalPin.P1) == LOW) {
@@ -111,26 +104,39 @@ function choose_program() {
         }
         
     }
-    if (choice < HALF_OF_MAX_VALUE) {
+    if (choice <= THIRD_OF_MAX_VALUE) {
         configure_oscilatii_simpla()
-    } else {
+    } else if (choice <= 2 * THIRD_OF_MAX_VALUE) {
         configure_fenomen_batai()
+    } else if (choice <= MAX_VALUE) {
+        configure_curbe_lissajous()
     }
     
 }
 
+function configure_curbe_lissajous() {
+    let amplitudine1 = set_value("amp1 = ")
+    let amplitudine2 = set_value("amp2 = ")
+    let frecventa1 = set_from_range("frec1 = ", "FREQUENCE")
+    let frecventa2 = set_from_range("frec2 = ", "FREQUENCE")
+    let faza1 = set_from_range("faza1 = ", "PHASE")
+    let faza2 = set_from_range("faza2 = ", "PHASE")
+    let durata = set_value("durata*10 = ")
+    curbele_lissajous(amplitudine1, amplitudine2, frecventa1, frecventa2, faza1, faza2, durata)
+}
+
 function configure_fenomen_batai() {
-    let amplitude = set_amplitude()
-    let frequence1 = set_frequence("freq1 = ")
-    let frequence2 = set_frequence("freq2 = ")
-    let duration = set_duration()
+    let amplitude = set_value("amp =")
+    let frequence1 = set_from_range("frec1 = ", "FREQUENCE")
+    let frequence2 = set_from_range("frec2 = ", "FREQUENCE")
+    let duration = 10 * set_value("durata*10 = ")
     fenomen_batai(amplitude, frequence1, frequence2, duration)
 }
 
 function configure_oscilatii_simpla() {
-    let amplitude = set_amplitude()
-    let frequence = set_frequence("freq = ")
-    let duration = set_duration()
+    let amplitude = set_value("amp = ")
+    let frequence = set_from_range("frec = ", "FREQUENCE")
+    let duration = set_value("durata*10 = ")
     oscilatie_simpla(amplitude, frequence, duration)
 }
 
@@ -164,6 +170,20 @@ function fenomen_batai(amplitudine: number, frecventa1: number, frecventa2: numb
     }
 }
 
+function curbele_lissajous(amplitudine1: number, amplitudine2: number, frecventa1: number, frecventa2: number, faza1: number, faza2: number, durata: number) {
+    let pin_id1: number;
+    let pin_id2: number;
+    let timp = 0.01
+    while (timp <= durata) {
+        pin_id1 = amplitudine1 * Math.sin(frecventa1 * timp + faza1)
+        pin_id2 = amplitudine2 * Math.sin(frecventa2 * timp + faza2)
+        datalogger.log(datalogger.createCV("timp", pin_id1), datalogger.createCV("y", pin_id2))
+        console.log(pin_id1 + " " + pin_id2)
+        plot_point(pin_id1)
+        timp += STEP
+    }
+}
+
 // process the values to whole numbers and plots on the leds
 function plot_point(pin_id: number) {
     pin_id = Math.floor(pin_id)
@@ -174,8 +194,11 @@ function plot_point(pin_id: number) {
     draw_pin(pin_id, LOW)
 }
 
-init_screen()
+input.onButtonPressed(Button.A, function delete_log() {
+    datalogger.deleteLog()
+})
+init_device()
 render_text("screen init ", TOP_ROW, NO_TIME)
 render_text("completed", BOTTOM_ROW, 3000)
 choose_program()
-render_text("program terminat", TOP_ROW, 10000)
+render_text("program terminat", TOP_ROW, NO_TIME)
